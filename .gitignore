@@ -1,2 +1,4 @@
+.cargo/
 .idea/
-/target
+target/
+Cargo.lock
