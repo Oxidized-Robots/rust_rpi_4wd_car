@@ -33,15 +33,19 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//! A common set of error and result type used in the library.
 
-mod error;
-mod hids;
-mod motors;
-mod servos;
+use thiserror::Error;
 
-pub use crate::{
-    error::{Result, Rr4cError, Rr4cResult},
-    hids::Hids,
-    motors::Motors,
-    servos::Servos,
-};
+/// Provides a shared set of error types.
+#[derive(Debug, Error)]
+pub enum Rr4cError {
+    #[error("Gpio access failed")]
+    Gpio(#[from] rppal::gpio::Error)
+}
+
+/// Result type used when return value is needed from methods in library.
+pub type Rr4cResult<T> = std::result::Result<T, Rr4cError>;
+
+/// Result type used when return value is _NOT_ needed from methods in library.
+pub type Result = std::result::Result<(), Rr4cError>;
