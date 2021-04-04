@@ -37,11 +37,13 @@
 mod error;
 mod hids;
 mod motors;
+mod sensors;
 mod servos;
 
 pub use crate::{
     error::{Result, Rr4cError, Rr4cResult},
     hids::Hids,
     motors::Motors,
+    sensors::Sensors,
     servos::Servos,
 };
