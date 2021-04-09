@@ -113,6 +113,26 @@ where
     sleep(millis);
     motors.brake()?;
     sleep(tenth);
+    println!("Forward curve left");
+    motors.movement(speed as i8 - 10, speed as i8 + 10)?;
+    sleep(millis);
+    motors.brake()?;
+    sleep(tenth);
+    println!("Backward curve left");
+    motors.movement(-(speed as i8 - 10), -(speed as i8 + 10))?;
+    sleep(millis);
+    motors.brake()?;
+    sleep(tenth);
+    println!("Forward curve right");
+    motors.movement(speed as i8 + 10, speed as i8 - 10)?;
+    sleep(millis);
+    motors.brake()?;
+    sleep(tenth);
+    println!("Backward curve right");
+    motors.movement(-(speed as i8 + 10), -(speed as i8 - 10))?;
+    sleep(millis);
+    motors.brake()?;
+    sleep(tenth);
     println!("spin left");
     motors.spin_left(speed)?;
     sleep(millis);
@@ -122,5 +142,7 @@ where
     motors.spin_right(speed)?;
     sleep(millis);
     println!("brake");
-    motors.brake()
+    motors.brake()?;
+    sleep(millis);
+    Ok(())
 }

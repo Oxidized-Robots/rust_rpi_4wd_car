@@ -35,6 +35,7 @@
 // SOFTWARE.
 
 use crate::error::{Result, Rr4cError};
+use embedded_hal::Pwm;
 use rppal::gpio::{Gpio, OutputPin};
 
 pub struct Motors {
@@ -70,52 +71,16 @@ impl Motors {
         })
     }
     pub fn back<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_low();
-        self.a_in2.set_high();
-        self.b_in1.set_low();
-        self.b_in2.set_high();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(-(speed as i8), -(speed as i8))
     }
     pub fn back_left<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_low();
-        self.a_in2.set_low();
-        self.b_in1.set_low();
-        self.b_in2.set_high();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(0, -(speed as i8))
     }
     pub fn back_right<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_low();
-        self.a_in2.set_high();
-        self.b_in1.set_low();
-        self.b_in2.set_low();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(-(speed as i8), 0)
     }
     pub fn brake(&mut self) -> Result {
         self.a_in1.set_low();
@@ -127,89 +92,72 @@ impl Motors {
         Ok(())
     }
     pub fn forward<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_high();
-        self.a_in2.set_low();
-        self.b_in1.set_high();
-        self.b_in2.set_low();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(speed as i8, speed as i8)
     }
     pub fn left<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(0, speed as i8)
+    }
+    pub fn movement<L: Into<Option<i8>>, R: Into<Option<i8>>>(
+        &mut self,
+        left_speed: L,
+        right_speed: R,
+    ) -> Result {
+        let left_speed = left_speed.into().unwrap_or(50);
+        let right_speed = right_speed.into().unwrap_or(50);
+        let left_dc: f64;
+        let right_dc: f64;
+        match left_speed.is_positive() {
+            true => {
+                left_dc = left_speed.min(100) as f64 * 0.01;
+                self.a_in1.set_high();
+                self.a_in2.set_low();
+            }
+            false => {
+                left_dc = left_speed.max(-100) as f64 * -0.01;
+                self.a_in1.set_low();
+                self.a_in2.set_high();
+            }
         }
-        self.a_in1.set_low();
-        self.a_in2.set_low();
-        self.b_in1.set_high();
-        self.b_in2.set_low();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
+        match right_speed.is_positive() {
+            true => {
+                right_dc = right_speed.min(100) as f64 * 0.01;
+                self.b_in1.set_high();
+                self.b_in2.set_low();
+            }
+            false => {
+                right_dc = right_speed.max(-100) as f64 * -0.01;
+                self.b_in1.set_low();
+                self.b_in2.set_high();
+            }
+        }
+        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, left_dc)?;
+        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, right_dc)?;
         Ok(())
     }
     pub fn right<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_high();
-        self.a_in2.set_low();
-        self.b_in1.set_low();
-        self.b_in2.set_low();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(speed as i8, 0)
+    }
+    pub fn speed(&self) -> (u8, u8) {
+        let left = (self.a_pwm.get_duty(()) * 100.0) as u8;
+        let right = (self.b_pwm.get_duty(()) * 100.0) as u8;
+        (left, right)
     }
     pub fn spin_left<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_low();
-        self.a_in2.set_high();
-        self.b_in1.set_high();
-        self.b_in2.set_low();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(-(speed as i8), speed as i8)
     }
     pub fn spin_right<S: Into<Option<u8>>>(&mut self, speed: S) -> Result {
-        let speed = speed.into();
-        let duty_cycle: f64;
-        if let Some(speed) = speed {
-            duty_cycle = speed.min(100) as f64 * 0.01f64;
-        } else {
-            duty_cycle = 0.5;
-        }
-        self.a_in1.set_high();
-        self.a_in2.set_low();
-        self.b_in1.set_low();
-        self.b_in2.set_high();
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, duty_cycle)?;
-        Ok(())
+        let speed = speed.into().unwrap_or(50).min(100);
+        self.movement(speed as i8, -(speed as i8))
     }
-
+    // Left side
     const A_IN1: u8 = 20;
     const A_IN2: u8 = 21;
     const A_PWM: u8 = 16;
+    // Right side
     const B_IN1: u8 = 19;
     const B_IN2: u8 = 26;
     const B_PWM: u8 = 13;
