@@ -62,12 +62,13 @@ fn main() -> Result<()> {
     })
     .context("Error setting Ctrl-C handler")?;
     let speed = 25;
+    let pause = 1.0;
     // Loop until Ctrl-C is received.
     while running.load(Ordering::SeqCst) {
         println!("Ctrl-C (Cmd + . for Mac OS) to stop");
         println!("speed: {}%", speed);
-        test(&mut motors, speed, 1.0).context("Tests failed")?;
-        sleep(Duration::from_secs_f64(0.5));
+        test(&mut motors, speed, pause).context("Tests failed")?;
+        sleep(Duration::from_secs_f64(pause));
         println!();
     }
     println!("Finished motor tests");
@@ -79,67 +80,44 @@ where
     S: Into<Option<u8>>,
     P: Into<Option<f64>>,
 {
-    let speed = speed.into().unwrap_or(50);
-    let pause = pause.into().unwrap_or(0.5);
+    let speed = speed.into().unwrap_or(25) as i8;
+    let pause = pause.into().unwrap_or(1.0);
     let millis = Duration::from_secs_f64(pause);
-    let tenth = Duration::from_millis(100);
     println!("forward");
-    motors.forward(speed)?;
+    motors.movement(speed, speed)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("back");
-    motors.back(speed)?;
+    motors.movement(-speed, -speed)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("left");
-    motors.left(speed)?;
+    motors.movement(0, speed)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("back left");
-    motors.back_left(speed)?;
+    motors.movement(0, -speed)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("right");
-    motors.right(speed)?;
+    motors.movement(speed, 0)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("back right");
-    motors.back_right(speed)?;
+    motors.movement(-speed, 0)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("Forward curve left");
     motors.movement(speed as i8 - 10, speed as i8 + 10)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("Backward curve left");
     motors.movement(-(speed as i8 - 10), -(speed as i8 + 10))?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("Forward curve right");
     motors.movement(speed as i8 + 10, speed as i8 - 10)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("Backward curve right");
     motors.movement(-(speed as i8 + 10), -(speed as i8 - 10))?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("spin left");
-    motors.spin_left(speed)?;
+    motors.movement(-speed, speed)?;
     sleep(millis);
-    motors.brake()?;
-    sleep(tenth);
     println!("spin right");
-    motors.spin_right(speed)?;
+    motors.movement(speed, -speed)?;
     sleep(millis);
     println!("brake");
     motors.brake()?;

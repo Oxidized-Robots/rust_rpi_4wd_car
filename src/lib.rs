@@ -34,16 +34,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-mod error;
-mod hids;
-mod motors;
-mod sensors;
-mod servos;
-
 pub use crate::{
+    control::Control,
     error::{Result, Rr4cError, Rr4cResult},
     hids::Hids,
     motors::Motors,
     sensors::Sensors,
     servos::Servos,
 };
+
+mod control;
+mod error;
+mod hids;
+mod motors;
+mod sensors;
+mod servos;

@@ -1,6 +1,6 @@
 [package]
 name = "rust_rpi_4wd_car"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Michael Cummings <dragonrun1@gmail.com>"]
 edition = "2018"
 license = "MIT"
