@@ -1,10 +1,15 @@
 [package]
 name = "rust_rpi_4wd_car"
-version = "0.0.8"
+version = "0.0.9"
 description = "Rust code for Yahboom 4WD smart robot for Raspberry Pi 4B"
 authors = ["Michael Cummings <dragonrun1@gmail.com>"]
 edition = "2018"
-license = "MIT"
+keywords = ["raspberry", "pi", "robot", "yahboom"]
+categories = ["embedded", "hardware-support", "os"]
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/Oxidized-Robots/rust_rpi_4wd_car"
+readme = "README.md"
+repository = "https://github.com/Oxidized-Robots/rust_rpi_4wd_car"
 
 [dependencies]
 anyhow = "1.0.40"
