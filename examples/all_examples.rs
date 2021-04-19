@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     );
     let mut hids = Hids::new().context("Failed to get hids instance")?;
     let mut motors = Motors::new().context("Failed to get motors instance")?;
-    let mut sensors = Sensors::new(None).context("Failed to get sensors instance")?;
+    let mut sensors = Sensors::new(None, None).context("Failed to get sensors instance")?;
     let mut servos = Servos::new().context("Failed to get servos instance")?;
     // Stuff needed to nicely handle Ctrl-C from user.
     let running = Arc::new(AtomicBool::new(true));
