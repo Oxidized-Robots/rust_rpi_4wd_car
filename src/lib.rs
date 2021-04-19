@@ -33,9 +33,16 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//! Library that can be used to control the [Yahboom 4WD smart robot] for the
+//! Raspberry Pi 4B
+//!
+//! Include modules for all of the [hids], motors, sensors, and servos
+//!
+//! [hids]: https://en.wikipedia.org/wiki/Human_interface_device
+//! [Yahboom 4WD smart robot]: https://category.yahboom.net/products/4wdrobot
 
 pub use crate::{
-    control::Control,
+    command::Decoder,
     error::{Result, Rr4cError, Rr4cResult},
     hids::Hids,
     motors::Motors,
@@ -43,9 +50,11 @@ pub use crate::{
     servos::Servos,
 };
 
-mod control;
+mod command;
 mod error;
 mod hids;
 mod motors;
 mod sensors;
 mod servos;
+#[cfg(test)]
+mod tests;

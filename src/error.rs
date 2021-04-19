@@ -33,15 +33,35 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//! A common set of error and result type used in the library.
+//! A common set of error and result types used in the library.
 
 use thiserror::Error;
 
-/// Provides a shared set of error types.
+/// Provides a shared set of error types used by the library.
 #[derive(Debug, Error)]
 pub enum Rr4cError {
+    #[error("Was given invalid command: '{0}'")]
+    BadCommand(String),
+    #[error("Was given bad command value in command: '{0}'")]
+    BadCommandValue(String),
     #[error("Gpio access failed")]
-    Gpio(#[from] rppal::gpio::Error)
+    Gpio(#[from] rppal::gpio::Error),
+    #[error("Was given an invalid or incomplete command: '{0}'")]
+    IncompleteCommand(String),
+    #[error("Given unknown command: '{0}'")]
+    UnknownCommand(String),
+    #[error("Given unknown led command: '{0}'")]
+    UnknownLedCommand(u8),
+    #[error("Given unknown mode command: '{0}'")]
+    UnknownModeCommand(String),
+    #[error("Given unknown motor command '{0}'")]
+    UnknownMotorCommand(u8),
+    #[error("Given unknown motor speed command '{0}'")]
+    UnknownMotorSpeedCommand(u8),
+    #[error("Given unknown servo command '{0}'")]
+    UnknownServoCommand(u8),
+    #[error("Given unknown spin command '{0}'")]
+    UnknownSpinCommand(u8),
 }
 
 /// Result type used when return value is needed from methods in library.

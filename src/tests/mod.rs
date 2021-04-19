@@ -33,53 +33,8 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-extern crate rust_rpi_4wd_car;
+//! All the tests
 
-use anyhow::{Context, Result};
-use rppal::system::DeviceInfo;
-use rust_rpi_4wd_car::Sensors;
-use std::{
-    sync::atomic::{AtomicBool, Ordering},
-    sync::Arc,
-    thread::sleep,
-    time::Duration,
-};
-
-fn main() -> Result<()> {
-    println!(
-        "Beginning sensors tests on {}",
-        DeviceInfo::new()
-            .context("Failed to get new DeviceInfo")?
-            .model()
-    );
-    sleep(Duration::from_secs(2));
-    let mut sensors = Sensors::new(None, None).context("Failed to get instance")?;
-    // Stuff needed to nicely handle Ctrl-C from user.
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-    })
-    .context("Error setting Ctrl-C handler")?;
-    println!("Ctrl-C (Cmd + . for Mac OS) to stop");
-    // Loop until Ctrl-C is received.
-    while running.load(Ordering::SeqCst) {
-        test(&mut sensors);
-        sleep(Duration::from_secs_f64(0.5));
-    }
-    println!();
-    println!("Finished sensors tests");
-    Ok(())
-}
-
-fn test(sensors: &mut Sensors) {
-    // let distance = sensors.ultrasonic().unwrap_or(-1.0);
-    // let ir = sensors.ir_proximities();
-    // let ldr = sensors.ldr();
-    // let tracking = sensors.tracking();
-    // println!(
-    //     "ultrasonic: {:6.2}, tracking: {:?}, ir: {:?}, ldr: {:?}",
-    //     distance, tracking, ir, ldr
-    // );
-    println!("{}", sensors.as_yb_postback());
+mod control {
+    // todo
 }

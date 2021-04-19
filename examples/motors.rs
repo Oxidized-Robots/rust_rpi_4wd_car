@@ -83,6 +83,9 @@ where
     let speed = speed.into().unwrap_or(25) as i8;
     let pause = pause.into().unwrap_or(1.0);
     let millis = Duration::from_secs_f64(pause);
+    println!("enable motors");
+    motors.enable(true);
+    sleep(millis);
     println!("forward");
     motors.movement(speed, speed)?;
     sleep(millis);
@@ -121,6 +124,15 @@ where
     sleep(millis);
     println!("brake");
     motors.brake()?;
+    sleep(millis);
+    println!("disabled motors");
+    motors.enable(false);
+    sleep(millis);
+    println!("forward");
+    motors.movement(speed, speed)?;
+    sleep(millis);
+    println!("back");
+    motors.movement(-speed, -speed)?;
     sleep(millis);
     Ok(())
 }

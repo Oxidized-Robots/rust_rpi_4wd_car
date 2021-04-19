@@ -33,19 +33,49 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//! Contains all the motor related components.
 
 use crate::error::{Result, Rr4cError, Rr4cResult};
 use embedded_hal::Pwm;
 use rppal::gpio::{Gpio, OutputPin};
 
+/// Proves a simpler interface for the robot's motors.
 #[derive(Debug)]
 pub struct Motors {
+    /// Instance of [OutputPin] connected to left motor input 1 pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     a_in1: OutputPin,
+    /// Instance of [OutputPin] connected to left motor input 2 pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     a_in2: OutputPin,
+    /// Instance of [OutputPin] connected to left motor PWM pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     a_pwm: OutputPin,
+    /// Instance of [OutputPin] connected to right motor input 1 pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     b_in1: OutputPin,
+    /// Instance of [OutputPin] connected to right motor input 2 pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     b_in2: OutputPin,
+    /// Instance of [OutputPin] connected to right motor PWM pin of motor
+    /// driver chip.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
     b_pwm: OutputPin,
+    /// Default motor speed when `None` argument is used with [`movement()`]
+    /// method.
+    ///
+    /// [`movement()`]: Motors::movement()
     default_speed: i8,
     /// Speed scale factor
     ///
@@ -88,6 +118,7 @@ impl Motors {
             speed_scale,
         })
     }
+    /// Stop the robot motors.
     pub fn brake(&mut self) -> Result {
         self.a_in1.set_low();
         self.a_in2.set_low();
@@ -96,23 +127,64 @@ impl Motors {
         self.a_pwm.clear_pwm()?;
         self.b_pwm.clear_pwm().map_err(Rr4cError::Gpio)
     }
-    pub fn movement<L: Into<Option<i8>>, R: Into<Option<i8>>>(
-        &mut self,
-        left_speed: L,
-        right_speed: R,
-    ) -> Result {
-        let left_speed = left_speed.into().unwrap_or(self.default_speed);
-        let right_speed = right_speed.into().unwrap_or(self.default_speed);
+    /// Used to enable/disable robot moving.
+    ///
+    /// ## Arguments
+    /// * `v` - Use `true` to enable robot moving else `false` to disable.
+    pub fn enable(&mut self, v: bool) {
+        if v {
+            self.a_pwm.enable(());
+            self.b_pwm.enable(());
+        } else {
+            self.a_pwm.disable(());
+            self.b_pwm.disable(());
+        }
+    }
+    /// Sets direction and speed of motors.
+    ///
+    /// __NOTE:__ Motors must be enabled by calling
+    /// [`enable(true)`] before this command cause robot to start moving.
+    ///
+    /// ## Arguments
+    ///
+    /// Both motors use a -100(%) to +100(%) integer speed range.
+    ///
+    /// __NOTE:__ Speeds below 20% in either direction may be glitchy and ones
+    /// below 10% are likely to cause little or no movement of the robot.
+    ///
+    /// * `left` - Speed and direction for left motors.
+    /// * `right` - Speed and direction for right motors.
+    ///
+    /// ## Examples
+    ///
+    /// ```edition2018, no_run
+    /// # #[cfg(target_arch = "arm")]
+    /// motors.enable(true);
+    /// # #[cfg(target_arch = "arm")]
+    /// motors.movement(-50, 50)?;
+    /// ```
+    /// This will cause the robot to start spinning in place to the left.
+    /// The left motors going backwards and the right motors forward.
+    /// Both motors will be at ~50% speed.
+    ///
+    /// [`enable(true)`]: Motors::enable()
+    pub fn movement<L, R>(&mut self, left: L, right: R) -> Result
+    where
+        L: Into<Option<i8>>,
+        R: Into<Option<i8>>,
+    {
+        let left = left.into().unwrap_or(self.default_speed);
+        let right = right.into().unwrap_or(self.default_speed);
         let left_dc: f64;
         let right_dc: f64;
-        match left_speed.signum() {
+        match left.signum() {
             1 => {
-                left_dc = left_speed.min(100) as f64 * self.speed_scale;
+                left_dc = left.min(100) as f64 * self.speed_scale;
                 self.a_in1.set_high();
                 self.a_in2.set_low();
             }
             -1 => {
-                left_dc = left_speed.max(-100) as f64 * -self.speed_scale;
+                left_dc = left.max(-100) as f64 * -self.speed_scale;
                 self.a_in1.set_low();
                 self.a_in2.set_high();
             }
@@ -123,14 +195,14 @@ impl Motors {
             }
             _ => unreachable!(),
         }
-        match right_speed.signum() {
+        match right.signum() {
             1 => {
-                right_dc = right_speed.min(100) as f64 * self.speed_scale;
+                right_dc = right.min(100) as f64 * self.speed_scale;
                 self.b_in1.set_high();
                 self.b_in2.set_low();
             }
             -1 => {
-                right_dc = right_speed.max(-100) as f64 * -self.speed_scale;
+                right_dc = right.max(-100) as f64 * -self.speed_scale;
                 self.b_in1.set_low();
                 self.b_in2.set_high();
             }
@@ -141,10 +213,16 @@ impl Motors {
             }
             _ => unreachable!(),
         }
-        self.a_pwm.set_pwm_frequency(Self::FREQUENCY, left_dc)?;
-        self.b_pwm.set_pwm_frequency(Self::FREQUENCY, right_dc)?;
+        self.a_pwm.set_duty((), left_dc);
+        self.b_pwm.set_duty((), right_dc);
+        // self.a_pwm.set_pwm_frequency(Self::FREQUENCY, left_dc)?;
+        // self.b_pwm.set_pwm_frequency(Self::FREQUENCY, right_dc)?;
         Ok(())
     }
+    /// Access the current speeds of the left and right motors.
+    ///
+    /// __NOTE:__ Speeds will be return even when motors are _not_ actively
+    /// being driven or enabled.
     pub fn speeds(&self) -> (i8, i8) {
         let left: i8;
         let right: i8;
@@ -164,13 +242,18 @@ impl Motors {
         }
         (left, right)
     }
-    // Left side
+    /// Left motor input 1 pin #.
     const A_IN1: u8 = 20;
+    /// Left motor input 2 pin #.
     const A_IN2: u8 = 21;
+    /// Left motor PWM pin #.
     const A_PWM: u8 = 16;
-    // Right side
+    /// Right motor input 1 pin #.
     const B_IN1: u8 = 19;
+    /// Right motor input 2 pin #.
     const B_IN2: u8 = 26;
+    /// Right motor PWM pin #.
     const B_PWM: u8 = 13;
-    const FREQUENCY: f64 = 3000.0; // In Hz
+    /// Frequency use for motor PWM in Hz.
+    const FREQUENCY: f64 = 3000.0;
 }

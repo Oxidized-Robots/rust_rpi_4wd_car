@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     );
     sleep(Duration::from_secs(2));
     let mut hids = Hids::new().context("Failed to get instance")?;
-    test(&mut hids, 0.5).context("Tests failed")?;
+    test(&mut hids, None).context("Tests failed")?;
     println!("Finished HIDs tests");
     Ok(())
 }
@@ -61,9 +61,9 @@ fn test<P: Into<Option<f64>>>(hids: &mut Hids, pause: P) -> CarResult {
     hids.key_press();
     sleep(millis);
     println!("blow");
-    hids.blow(0.5);
+    hids.blow(1.0);
     sleep(millis);
-    println!("whistle");
+    println!("3 whistles");
     hids.whistle();
     sleep(millis);
     hids.whistle();

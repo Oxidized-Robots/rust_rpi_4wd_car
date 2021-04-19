@@ -49,15 +49,16 @@ fn main() -> Result<()> {
     );
     sleep(Duration::from_secs(2));
     let mut servos = Servos::new().context("Failed to get instance")?;
-    test(&mut servos, 1.5).context("Tests failed")?;
+    test(&mut servos, 1.0).context("Tests failed")?;
     sleep(Duration::from_secs(1));
     println!("Finished servo tests");
     Ok(())
 }
 
+//noinspection DuplicatedCode
 fn test<P: Into<Option<f64>>>(servos: &mut Servos, pause: P) -> CarResult {
     let pause = pause.into().unwrap_or(0.5);
-    let millis = Duration::from_secs_f64(pause.abs().min(10.0));
+    let millis = Duration::from_secs_f64(pause.abs().max(0.5).min(10.0));
     println!("Initialize");
     servos.servos_init()?;
     sleep(millis);
@@ -98,18 +99,22 @@ fn test<P: Into<Option<f64>>>(servos: &mut Servos, pause: P) -> CarResult {
     servos.set_camera_tilt(90)?;
     sleep(millis);
     println!("All servos");
-    for angle in (0..=180).step_by(30) {
+    servos.set_front(0)?;
+    servos.set_camera_pan(0)?;
+    servos.set_camera_tilt(0)?;
+    sleep(millis);
+    for angle in (0..=180).step_by(10) {
         println!("Angle: {} degrees", angle);
-        servos.set_front(angle)?;
-        servos.set_camera_pan(angle)?;
-        servos.set_camera_tilt(angle)?;
+        servos.front_left()?;
+        servos.camera_pan_left()?;
+        servos.camera_tilt_up()?;
         sleep(millis);
     }
-    for angle in (0..=150).rev().step_by(30) {
+    for angle in (0..=170).rev().step_by(10) {
         println!("Angle: {} degrees", angle);
-        servos.set_front(angle)?;
-        servos.set_camera_pan(angle)?;
-        servos.set_camera_tilt(angle)?;
+        servos.front_right()?;
+        servos.camera_pan_right()?;
+        servos.camera_tilt_down()?;
         sleep(millis);
     }
     println!("Reset");
