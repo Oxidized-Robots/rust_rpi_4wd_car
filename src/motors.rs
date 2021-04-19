@@ -159,9 +159,15 @@ impl Motors {
     ///
     /// ```edition2018, no_run
     /// # #[cfg(target_arch = "arm")]
-    /// motors.enable(true);
-    /// # #[cfg(target_arch = "arm")]
-    /// motors.movement(-50, 50)?;
+    /// # {
+    /// use rust_rpi_4wd_car::{Motors, Result};
+    ///
+    /// fn main() -> Result {
+    ///     let mut motors = Motors::new()?;
+    ///     motors.enable(true);
+    ///     motors.movement(-50, 50)
+    /// }
+    /// # }
     /// ```
     /// This will cause the robot to start spinning in place to the left.
     /// The left motors going backwards and the right motors forward.

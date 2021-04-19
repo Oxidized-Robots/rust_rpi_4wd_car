@@ -191,11 +191,11 @@ impl Hids {
     ///
     /// ```edition2018
     /// # #[cfg(target_arch = "arm")]
+    /// # {
+    /// # extern crate rust_rpi_4wd_car;
     /// use rust_rpi_4wd_car::{Hids, Result};
-    /// # #[cfg(target_arch = "arm")]
     /// use std::{thread::sleep, time::Duration};
     ///
-    /// # #[cfg(target_arch = "arm")]
     /// fn main() -> Result {
     ///     let mut hids = Hids::new()?;
     ///     let pause = Duration::from_millis(50);
@@ -206,6 +206,7 @@ impl Hids {
     ///     }
     ///     hids.set_blue(0)
     /// }
+    /// # }
     /// ```
     ///
     pub fn set_blue<C: Into<Option<u8>>>(&mut self, brightness: C) -> Result {
@@ -244,11 +245,11 @@ impl Hids {
     ///
     /// ```edition2018
     /// # #[cfg(target_arch = "arm")]
+    /// # {
+    /// # extern crate rust_rpi_4wd_car;
     /// use rust_rpi_4wd_car::{Hids, Result};
-    /// # #[cfg(target_arch = "arm")]
     /// use std::{thread::sleep, time::Duration};
     ///
-    /// # #[cfg(target_arch = "arm")]
     /// fn main() -> Result {
     ///     let mut hids = Hids::new()?;
     ///     let pause = Duration::from_millis(50);
@@ -259,6 +260,7 @@ impl Hids {
     ///     }
     ///     hids.set_green(0)
     /// }
+    /// # }
     /// ```
     ///
     pub fn set_green<C: Into<Option<u8>>>(&mut self, value: C) -> Result {
@@ -283,11 +285,11 @@ impl Hids {
     ///
     /// ```edition2018
     /// # #[cfg(target_arch = "arm")]
+    /// # {
+    /// # extern crate rust_rpi_4wd_car;
     /// use rust_rpi_4wd_car::{Hids, Result};
-    /// # #[cfg(target_arch = "arm")]
     /// use std::{thread::sleep, time::Duration};
     ///
-    /// # #[cfg(target_arch = "arm")]
     /// fn main() -> Result {
     ///     let mut hids = Hids::new()?;
     ///     let pause = Duration::from_millis(50);
@@ -298,6 +300,7 @@ impl Hids {
     ///     }
     ///     hids.set_red(0)
     /// }
+    /// # }
     /// ```
     ///
     pub fn set_red<C: Into<Option<u8>>>(&mut self, value: C) -> Result {
