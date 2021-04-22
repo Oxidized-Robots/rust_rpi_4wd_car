@@ -33,6 +33,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#![doc(html_logo_url = "https://avatars.githubusercontent.com/u/82801111?s=200&v=4")]
 //! Library that can be used to control the [Yahboom 4WD smart robot] for the
 //! Raspberry Pi 4B
 //!
