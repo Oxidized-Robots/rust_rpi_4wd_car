@@ -36,7 +36,7 @@
 //! Contains all the motor related components.
 
 use crate::error::{Result, Rr4cError, Rr4cResult};
-use embedded_hal::Pwm;
+use embedded_hal::PwmPin;
 use rppal::gpio::{Gpio, OutputPin};
 
 /// Proves a simpler interface for the robot's motors.
@@ -100,12 +100,12 @@ impl Motors {
         a_in1.set_low();
         a_in2.set_low();
         a_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        a_pwm.disable(());
+        a_pwm.disable();
         a_pwm.set_low();
         b_in1.set_low();
         b_in2.set_low();
         b_pwm.set_pwm_frequency(Self::FREQUENCY, 0.0)?;
-        b_pwm.disable(());
+        b_pwm.disable();
         b_pwm.set_low();
         Ok(Self {
             a_in1,
@@ -133,11 +133,11 @@ impl Motors {
     /// * `v` - Use `true` to enable robot moving else `false` to disable.
     pub fn enable(&mut self, v: bool) {
         if v {
-            self.a_pwm.enable(());
-            self.b_pwm.enable(());
+            self.a_pwm.enable();
+            self.b_pwm.enable();
         } else {
-            self.a_pwm.disable(());
-            self.b_pwm.disable(());
+            self.a_pwm.disable();
+            self.b_pwm.disable();
         }
     }
     /// Sets direction and speed of motors.
@@ -219,10 +219,8 @@ impl Motors {
             }
             _ => unreachable!(),
         }
-        self.a_pwm.set_duty((), left_dc);
-        self.b_pwm.set_duty((), right_dc);
-        // self.a_pwm.set_pwm_frequency(Self::FREQUENCY, left_dc)?;
-        // self.b_pwm.set_pwm_frequency(Self::FREQUENCY, right_dc)?;
+        self.a_pwm.set_duty(left_dc);
+        self.b_pwm.set_duty(right_dc);
         Ok(())
     }
     /// Access the current speeds of the left and right motors.
@@ -233,18 +231,18 @@ impl Motors {
         let left: i8;
         let right: i8;
         if self.a_in1.is_set_high() {
-            left = (self.a_pwm.get_duty(()) * self.speed_scale.recip()) as i8;
+            left = (self.a_pwm.get_duty() * self.speed_scale.recip()) as i8;
         } else if self.a_in2.is_set_low() {
             left = 0;
         } else {
-            left = (self.a_pwm.get_duty(()) * -self.speed_scale.recip()) as i8;
+            left = (self.a_pwm.get_duty() * -self.speed_scale.recip()) as i8;
         }
         if self.b_in1.is_set_high() {
-            right = (self.a_pwm.get_duty(()) * self.speed_scale.recip()) as i8;
+            right = (self.a_pwm.get_duty() * self.speed_scale.recip()) as i8;
         } else if self.b_in2.is_set_low() {
             right = 0;
         } else {
-            right = (self.a_pwm.get_duty(()) * -self.speed_scale.recip()) as i8;
+            right = (self.a_pwm.get_duty() * -self.speed_scale.recip()) as i8;
         }
         (left, right)
     }
