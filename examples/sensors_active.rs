@@ -33,10 +33,10 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-//! Example of sensors data use in both raw and Yahboom postback format.
+//! Example of sensors data use in Rr4c postback format with active sonar.
 //!
-//! Ultrasonic data is collected using the default on demand single ping per
-//! call method and _not_ the active sonar option.
+//! Instead of the default on demand single ping per call ultrasonic method the
+//! active sonar is being used.
 extern crate rust_rpi_4wd_car;
 
 use anyhow::{Context, Result};
@@ -51,13 +51,16 @@ use std::{
 
 fn main() -> Result<()> {
     println!(
-        "Beginning sensors tests on {}",
+        "Beginning sensors tests with active sonar on {}",
         DeviceInfo::new()
             .context("Failed to get new DeviceInfo")?
             .model()
     );
     sleep(Duration::from_secs(2));
     let mut sensors = Sensors::new(None, None).context("Failed to get instance")?;
+    sensors.set_sonar_active(true);
+    // Give it a little time to queue up sonar data.
+    sleep(Duration::from_secs_f64(0.05));
     // Stuff needed to nicely handle Ctrl-C from user.
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -66,27 +69,18 @@ fn main() -> Result<()> {
     })
     .context("Error setting Ctrl-C handler")?;
     println!("Ctrl-C (Cmd + . for Mac OS) to stop");
+    // Short pauses between sonar readings are no problem when using active sonar.
+    let dur = Duration::from_secs_f64(0.034);
     // Loop until Ctrl-C is received.
     while running.load(Ordering::SeqCst) {
         test(&mut sensors);
-        sleep(Duration::from_secs_f64(0.5));
+        sleep(dur);
     }
     println!();
-    println!("Finished sensors tests");
+    println!("Finished sensors tests with active sonar");
     Ok(())
 }
 
 fn test(sensors: &mut Sensors) {
-    // Raw sensor data.
-    let distance = sensors.ultrasonic().unwrap_or(-1.0);
-    let ir = sensors.ir_proximities();
-    let ldr = sensors.ldr_tracking();
-    let tracking = sensors.line_tracking();
-    println!(
-        "ultrasonic: {:6.2}, line: {:?}, ir: {:?}, ldr: {:?}",
-        distance, tracking, ir, ldr
-    );
-    sleep(Duration::from_millis(34));
-    // Yahboom compatible postback data.
-    println!("{}", sensors.as_yb_postback());
+    println!("{}", sensors.as_rr_postback());
 }

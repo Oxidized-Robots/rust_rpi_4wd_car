@@ -80,58 +80,89 @@ where
     S: Into<Option<u8>>,
     P: Into<Option<f64>>,
 {
-    let speed = speed.into().unwrap_or(25) as i8;
+    let speed = speed.into().unwrap_or(25).min(75) as i8;
+    let difference = speed - speed / 4;
     let pause = pause.into().unwrap_or(1.0);
     let millis = Duration::from_secs_f64(pause);
-    println!("enable motors");
+    // Short movement pause to help protect motors from quick direction changes.
+    let m_pause = Duration::from_millis(100);
+    println!("movement enabled: forward");
+    motors.movement(speed, speed)?;
     motors.enable(true);
     sleep(millis);
-    println!("forward");
-    motors.movement(speed, speed)?;
-    sleep(millis);
-    println!("back");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: back");
     motors.movement(-speed, -speed)?;
     sleep(millis);
-    println!("left");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: left");
     motors.movement(0, speed)?;
     sleep(millis);
-    println!("back left");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: back left");
     motors.movement(0, -speed)?;
     sleep(millis);
-    println!("right");
+    println!("movement enabled: right");
     motors.movement(speed, 0)?;
     sleep(millis);
-    println!("back right");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: back right");
     motors.movement(-speed, 0)?;
     sleep(millis);
-    println!("Forward curve left");
-    motors.movement(speed as i8 - 10, speed as i8 + 10)?;
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: forward curve left");
+    motors.movement(
+        speed.saturating_sub(difference),
+        speed.saturating_add(difference),
+    )?;
     sleep(millis);
-    println!("Backward curve left");
-    motors.movement(-(speed as i8 - 10), -(speed as i8 + 10))?;
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: backward curve left");
+    motors.movement(
+        -(speed.saturating_sub(difference)),
+        -(speed.saturating_add(difference)),
+    )?;
     sleep(millis);
-    println!("Forward curve right");
-    motors.movement(speed as i8 + 10, speed as i8 - 10)?;
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: forward curve right");
+    motors.movement(
+        speed.saturating_add(difference),
+        speed.saturating_sub(difference),
+    )?;
     sleep(millis);
-    println!("Backward curve right");
-    motors.movement(-(speed as i8 + 10), -(speed as i8 - 10))?;
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: backward curve right");
+    motors.movement(
+        -(speed.saturating_add(difference)),
+        -(speed.saturating_sub(difference)),
+    )?;
     sleep(millis);
-    println!("spin left");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: spin left");
     motors.movement(-speed, speed)?;
     sleep(millis);
-    println!("spin right");
+    motors.movement(0, 0)?;
+    sleep(m_pause);
+    println!("movement enabled: spin right");
     motors.movement(speed, -speed)?;
     sleep(millis);
-    println!("brake");
+    println!("movement enabled: brake");
     motors.brake()?;
     sleep(millis);
-    println!("disabled motors");
-    motors.enable(false);
-    sleep(millis);
-    println!("forward");
+    // motors.enable(false);
+    println!("movement disabled: forward");
     motors.movement(speed, speed)?;
     sleep(millis);
-    println!("back");
+    println!("movement disabled: back");
     motors.movement(-speed, -speed)?;
     sleep(millis);
     Ok(())
