@@ -4,9 +4,8 @@
 <br>
 Rust code for Yahboom 4WD smart robot for Raspberry Pi 4B.
 
-<br>
 <img src="https://avatars.githubusercontent.com/u/82801111?s=200&v=4" width=64 alt="Robotic avatar icon of Oxidized Robots">
-<br>
+
 This is the founding project of [Oxidized Robots] on Github.
 
 ## Table Of Contents
@@ -21,8 +20,8 @@ This is the founding project of [Oxidized Robots] on Github.
 
 You will need to have a recent version of [Rust] installed.
 Any version of Rust that supports version 0.12.0 or later of [rppal] should
-work but version 1.51.0 of Rust have been used during initial
-development on both the release channel.
+work but the release version 1.51.0 of Rust have been used during initial
+development.
 Earlier versions might work as well but have not been tested.
 
 Development can be done on any OS that Rust supports but the only expected
@@ -49,33 +48,33 @@ rust_rpi_4wd_car = "0.0.10"
 
 ## Examples
 
-You will find examples in the `examples` directory. The `all_examples`
-example was used for testing during initial development on a RPi 4.
+You will find several examples in the `examples` directory. The `demo` one
+is a good place to start with as it uses most aspects of the crate.
 
-To build the `all_examples` example start by clone this project somewhere on
-your Raspberry Pi:
+To build `demo` start by clone this project somewhere on your Raspberry Pi:
 
 ```shell
 git clone https://github.com/Oxidized-Robots/rust_rpi_4wd_car
 ```
 
-Next execute the follow to build the example:
+Change directory into the new one just created:
 
 ```shell
-cargo build --example all_examples
+cd rust_rpi_4wd_car
 ```
 
-And finally execute:
+Next execute the follow to build and run the `demo`:
 
 ```shell
-sudo ./target/debug/examples/all_examples
+cargo run --example demo
 ```
 
 You should see the series of tests being run which demo most of the aspects from
 the crate.
 
-You can find the latest version by go to [rust_rpi_4wd_car] on the crates.io
-website.
+You can find the latest release version by go to [rust_rpi_4wd_car] on the
+[crates.io] website or for development versions, bug reports, etc please go to
+the [Github repository] of the project.
 
 ## Contributing
 
@@ -99,12 +98,12 @@ Please make sure to update or add tests as appropriate.
 
 ## Licenses
 
-All code is licensed under either of the
+All code is licensed under both of the following:
 
   * [APACHE] - Apache License, Version 2.0
   * [MIT] - MIT License
 
-at your option.
+and may be used with either or both at your option.
 
 You can find copies of the licenses in the [LICENSE-APACHE] and the
 [LICENSE-MIT] files.
@@ -116,19 +115,21 @@ You can find a copy of the [CC-BY-SA] license in the [LICENSE-CC-BY-SA] file.
 [CC-BY-SA]: http://creativecommons.org/licenses/by-sa/4.0/
 [Cargo.toml]: https://doc.rust-lang.org/cargo/guide/dependencies.html
 [Contributor Covenant Code of Conduct]: CODE_OF_CONDUCT.md
+[Github repository]: https://github.com/Oxidized-Robots/rust_rpi_4wd_car
 [LICENSE-APACHE]: LICENSE-APACHE
 [LICENSE-CC-BY-SA]: LICENSE-CC-BY-SA
 [LICENSE-MIT]: LICENSE-MIT
 [MIT]: https://opensource.org/licenses/MIT
-[Oxidized Robots]: https://github.com/Oxidized-Robots/
+[Oxidized Robots]: https://github.com/Oxidized-Robots
 [Rust]: https://www.rust-lang.org/
 [cargo-edit]: https://crates.io/crates/cargo-edit
+[crates.io]: https://crates.io
 [rppal]: https://crates.io/crates/rppal
 [rust_rpi_4wd_car]: https://crates.io/crates/rust_rpi_4wd_car
 
 <hr>
 Copyright &copy; 2021, Michael Cummings<br/>
-<a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">
+<a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/">
 <img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" />
 </a>
 <div>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
