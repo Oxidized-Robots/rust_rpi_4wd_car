@@ -1,6 +1,6 @@
 [package]
 name = "rust_rpi_4wd_car"
-version = "0.0.10"
+version = "0.0.11"
 description = "Rust code for Yahboom 4WD smart robot for Raspberry Pi 4B"
 authors = ["Michael Cummings <dragonrun1@gmail.com>"]
 edition = "2018"
