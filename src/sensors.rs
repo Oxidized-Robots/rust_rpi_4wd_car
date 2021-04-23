@@ -48,8 +48,6 @@ use std::{
 /// Simplifies working with robot's ultrasonic, tracking, and proximity sensors.
 #[derive(Debug)]
 pub struct Sensors {
-    /// Boolean used to track active sonar status.
-    active_sonar: bool,
     /// Instance of [IrProximity](IrProximity).
     ir_proximity: IrProximity,
     /// Instance of [InputPin] connected to left infrared (IR) proximity pin.
@@ -70,6 +68,8 @@ pub struct Sensors {
     ///
     /// [InputPin]: rppal::gpio::InputPin
     ldr_right: InputPin,
+    /// Instance of [Sonar](Sonar).
+    sonar: Sonar,
     /// Instance of [LineTracking](LineTracking).
     tracking: LineTracking,
     /// Instance of [InputPin] connected to left line tracking input 1 pin.
@@ -88,20 +88,14 @@ pub struct Sensors {
     ///
     /// [InputPin]: rppal::gpio::InputPin
     track_right2: InputPin,
-    /// Instance of [AmUltrasonic](AmUltrasonic).
-    ultrasonic: AmUltrasonic,
-    /// Instance of [InputPin] connected to ultrasonic echo input pin.
-    ///
-    /// [InputPin]: rppal::gpio::InputPin
-    ultrasonic_echo: InputPin,
-    /// Instance of [OutputPin] connected to ultrasonic trigger output pin.
-    ///
-    /// [OutputPin]: rppal::gpio::OutputPin
-    ultrasonic_trigger: OutputPin,
 }
 
 impl Sensors {
-    /// Constructor
+    /// Constructor which uses default values for all optional arguments.
+    pub fn new() -> Rr4cResult<Self> {
+        Self::new_with_temp_hum(None, None)
+    }
+    /// Constructor with `temperature` and `humidity` options.
     ///
     /// ## Arguments
     ///
@@ -110,9 +104,10 @@ impl Sensors {
     ///
     /// * `temperature` - Temperature in °C.
     /// A `None` value will set a default of 20°C.
+    /// Temperatures are limited to between -40 and +65.5°C.
     /// * `humidity` - Relative humidity as %.
     /// A `None` value will set a default of 40%.
-    pub fn new<T, H>(temperature: T, humidity: H) -> Rr4cResult<Self>
+    pub fn new_with_temp_hum<T, H>(temperature: T, humidity: H) -> Rr4cResult<Self>
     where
         T: Into<Option<f32>>,
         H: Into<Option<f32>>,
@@ -120,35 +115,32 @@ impl Sensors {
         let gpio = Gpio::new()?;
         // IR
         let (ir_left, ir_right, ir_proximity) = Sensors::ir_init(&gpio)?;
-        // LDR
+        // LDR Tracking
         let ldr_left = gpio.get(Self::LDR_LEFT)?.into_input();
         let ldr_right = gpio.get(Self::LDR_RIGHT)?.into_input();
-        // Tracking
+        // line tracking
         let (track_left1, track_left2, track_right1, track_right2, tracking) =
             Sensors::line_tracking_init(&gpio)?;
-        // Ultrasonic
-        let (ultrasonic, ultrasonic_echo, ultrasonic_trigger) =
-            Sensors::ultrasonic_init(&gpio, temperature, humidity)?;
+        // Sonar
+        let sonar = Sonar::new_with_temp_hum(temperature, humidity)?;
         Ok(Self {
-            active_sonar: false,
             ir_proximity,
             ir_left,
             ir_right,
             ldr_left,
             ldr_right,
+            sonar,
             tracking,
             track_left1,
             track_left2,
             track_right1,
             track_right2,
-            ultrasonic,
-            ultrasonic_echo,
-            ultrasonic_trigger,
         })
     }
+    /// Produces an Rr4c compatible postback response of sensor data.
     pub fn as_rr_postback(&mut self) -> String {
-        let distance = self.ultrasonic().unwrap_or(-1.0);
-        let (ir_l, ir_r) = self.ir_proximities();
+        let distance = self.sonar.distance().unwrap_or(-1.0);
+        let (ir_l, ir_r) = self.ir_proximity();
         let (ldr_l, ldr_r) = self.ldr_tracking();
         let (line_l1, line_l2, line_r1, line_r2) = self.line_tracking();
         format!(
@@ -166,8 +158,8 @@ impl Sensors {
     }
     /// Produces an Yahboom compatible postback response of sensor data.
     pub fn as_yb_postback(&mut self) -> String {
-        let distance = self.ultrasonic().unwrap_or(-1.0);
-        let (ir_l, ir_r) = self.ir_proximities();
+        let distance = self.sonar.distance().unwrap_or(-1.0);
+        let (ir_l, ir_r) = self.ir_proximity();
         let (ldr_l, ldr_r) = self.ldr_tracking();
         let (line_l1, line_l2, line_r1, line_r2) = self.line_tracking();
         format!(
@@ -184,7 +176,7 @@ impl Sensors {
         )
     }
     /// Used to acquire latest infrared (IR) proximity sensors data.
-    pub fn ir_proximities(&self) -> (bool, bool) {
+    pub fn ir_proximity(&self) -> (bool, bool) {
         (
             self.ir_proximity.left.load(Ordering::Acquire),
             self.ir_proximity.right.load(Ordering::Acquire),
@@ -198,15 +190,6 @@ impl Sensors {
             self.ldr_right.read() == Level::High,
         )
     }
-    /// Sets if active sonar pinging should be used.
-    pub fn set_sonar_active(&mut self, v: bool) {
-        self.active_sonar = v;
-        if v {
-            self.ultrasonic_trigger.enable();
-        } else {
-            self.ultrasonic_trigger.disable();
-        }
-    }
     /// Used to acquire latest line tracking sensors data.
     pub fn line_tracking(&self) -> (bool, bool, bool, bool) {
         (
@@ -216,27 +199,17 @@ impl Sensors {
             self.tracking.right2.load(Ordering::Acquire),
         )
     }
-    /// Used to acquire latest ultrasonic distance measurement if available.
+    /// Enable/disable active background sonar pinging.
     ///
-    /// Polls for distance measurement in a loop with a timeout.
-    pub fn ultrasonic(&mut self) -> Option<f32> {
-        let timeout = (SystemTime::now()).add(Duration::from_nanos(Self::ULTRASONIC_TIMEOUT));
-        let dur = Duration::from_micros(10);
-        if !self.active_sonar {
-            self.ping();
-        }
-        while SystemTime::now() < timeout {
-            // Release lock as early as possible so echo interrupt thread can
-            // grab it.
-            {
-                let mut ultrasonic = self.ultrasonic.lock().expect("Someone broke the lock");
-                if let Some(distance) = ultrasonic.queue.pop() {
-                    return Some(distance);
-                }
-            }
-            sleep(dur);
-        }
-        None
+    /// ## Arguments
+    ///
+    /// * `enable` -Turns on active background sonar pinging when `true`.
+    pub fn sonar_active(&mut self, enable: bool) {
+        self.sonar.set_sonar_active(enable);
+    }
+    /// Used to acquire ultrasonic distance measurement if available.
+    pub fn sonar_distance(&mut self) -> Option<f32> {
+        self.sonar.distance()
     }
     /// Initialize all infrared (IR) proximity sensors related pins and data.
     fn ir_init(gpio: &Gpio) -> Rr4cResult<(InputPin, InputPin, IrProximity)> {
@@ -254,13 +227,6 @@ impl Sensors {
             sense.store(level == Level::Low, Ordering::Release);
         })?;
         Ok((ir_left, ir_right, ir_proximity))
-    }
-    /// Trigger an ultrasonic pulse when _not_ using active sonic.
-    fn ping(&mut self) {
-        self.ultrasonic_trigger.set_high();
-        sleep(Duration::from_nanos(10000));
-        self.ultrasonic_trigger.set_low();
-        sleep(Duration::from_nanos(2000));
     }
     /// Initialize all line tracking sensors related pins and data.
     fn line_tracking_init(gpio: &Gpio) -> Rr4cResult<LineInitResult> {
@@ -297,57 +263,6 @@ impl Sensors {
             tracking,
         ))
     }
-    /// Initialize all ultrasonic sensor related pins and data.
-    fn ultrasonic_init<T, H>(
-        gpio: &Gpio,
-        temperature: T,
-        humidity: H,
-    ) -> Rr4cResult<(AmUltrasonic, InputPin, OutputPin)>
-    where
-        T: Into<Option<f32>>,
-        H: Into<Option<f32>>,
-    {
-        let ultrasonic = Arc::new(Mutex::new(Ultrasonic::new(temperature, humidity)));
-        let mut ultrasonic_echo = gpio.get(Self::ULTRASONIC_ECHO)?.into_input();
-        let mut ultrasonic_trigger = gpio.get(Self::ULTRASONIC_TRIGGER)?.into_output();
-        ultrasonic_trigger.set_low();
-        ultrasonic_trigger
-            .set_pwm_frequency(Self::ACTIVE_SONIC_FREQUENCY, Self::ACTIVE_SONIC_DUTY_CYCLE)?;
-        ultrasonic_trigger.disable();
-        let sense = ultrasonic.clone();
-        ultrasonic_echo.set_async_interrupt(Both, move |level| {
-            let mut ultrasonic = sense.lock().expect("Someone broke the lock");
-            let dur = (SystemTime::now())
-                .duration_since(UNIX_EPOCH)
-                .expect("Bad robot!!! No time traveling to the past!");
-            match level {
-                Level::Low => {
-                    // Only process a falling edge when there was a leading edge.
-                    if let Some(rising) = ultrasonic.rising {
-                        ultrasonic.rising = None;
-                        // Only process falling edge that happened after the
-                        // leading edge.
-                        if let Some(diff) = dur.checked_sub(rising) {
-                            let distance = diff.as_secs_f32() * ultrasonic.speed_of_sound;
-                            if distance > 2.0 && distance < 500.0 {
-                                ultrasonic.queue.push(distance);
-                            }
-                        }
-                    }
-                }
-                Level::High => {
-                    ultrasonic.rising = Some(dur);
-                }
-            }
-        })?;
-        Ok((ultrasonic, ultrasonic_echo, ultrasonic_trigger))
-    }
-    /// Timeout in nanoseconds (ns) ≈ 30 Hz
-    pub const ULTRASONIC_TIMEOUT: u64 = 33_333_000;
-    /// Frequency for active sonic pings in Hz.
-    const ACTIVE_SONIC_FREQUENCY: f64 = 30.0;
-    /// PWM Duty cycle in % used for active sonic.
-    const ACTIVE_SONIC_DUTY_CYCLE: f64 = 0.003;
     /// Left infrared obstacle input pin #.
     const INFRARED_LEFT: u8 = 12;
     /// Right infrared obstacle input pin #.
@@ -364,14 +279,12 @@ impl Sensors {
     const LINE_RIGHT_1: u8 = 4;
     /// Right line tracking input 2 pin #.
     const LINE_RIGHT_2: u8 = 18;
-    /// Ultrasonic echo input pin #.
-    const ULTRASONIC_ECHO: u8 = 0;
-    /// Ultrasonic trigger output pin #.
-    const ULTRASONIC_TRIGGER: u8 = 1;
 }
 
+/// Simple overwriting ring buffer used to queue ultrasonic distance readings
+/// from active sonar.
 #[derive(Clone, Copy, Debug)]
-pub struct CircularQueue {
+struct CircularQueue {
     depth: usize,
     read: usize,
     queue: [f32; 6],
@@ -452,11 +365,168 @@ impl LineTracking {
     }
 }
 
+/// Ultrasonic sonar device driver for Yahboom ultrasonic sensor or similar
+/// devices like the HC-SR04 or HC-SR05.
+#[derive(Debug)]
+pub struct Sonar {
+    /// Boolean used to track active sonar status.
+    active_sonar: bool,
+    /// Instance of [AmUltrasonic](AmUltrasonic).
+    ultrasonic: AmUltrasonic,
+    /// Instance of [InputPin] connected to ultrasonic echo input pin.
+    ///
+    /// [InputPin]: rppal::gpio::InputPin
+    echo: InputPin,
+    /// Instance of [OutputPin] connected to ultrasonic trigger output pin.
+    ///
+    /// [OutputPin]: rppal::gpio::OutputPin
+    trigger: OutputPin,
+}
+impl Sonar {
+    /// Constructor which uses default values for all optional arguments.
+    pub fn new() -> Rr4cResult<Self> {
+        Self::new_with_kitchen_sink(None, None, None, None)
+    }
+    /// Constructor with just `temperature` and `humidity` options.
+    ///
+    /// ## Arguments
+    ///
+    /// The `temperature` and `humidity` values are used to increase the
+    /// accuracy of ultrasonic distance measurements.
+    ///
+    /// * `temperature` - Temperature in °C.
+    /// A `None` value will set a default of 20°C.
+    /// Temperatures are limited to between -40 and +65.5°C.
+    /// * `humidity` - Relative humidity as %.
+    /// A `None` value will set a default of 40%.
+    pub fn new_with_temp_hum<T, H>(temperature: T, humidity: H) -> Rr4cResult<Self>
+    where
+        T: Into<Option<f32>>,
+        H: Into<Option<f32>>,
+    {
+        Self::new_with_kitchen_sink(None, None, temperature, humidity)
+    }
+    /// Constructor with all optional arguments.
+    ///
+    /// ## Arguments
+    ///
+    /// The `temperature` and `humidity` values are used to increase the
+    /// accuracy of ultrasonic distance measurements.
+    ///
+    /// * `echo` - Optional ultrasonic echo input pin #.
+    /// * `trigger` - Optional ultrasonic trigger output pin #.
+    /// * `temperature` - Temperature in °C.
+    /// A `None` value will set a default of 20°C.
+    /// * `humidity` - Relative humidity as %.
+    /// A `None` value will set a default of 40%.
+    pub fn new_with_kitchen_sink<E, R, T, H>(
+        echo: E,
+        trigger: R,
+        temperature: T,
+        humidity: H,
+    ) -> Rr4cResult<Self>
+    where
+        E: Into<Option<u8>>,
+        R: Into<Option<u8>>,
+        T: Into<Option<f32>>,
+        H: Into<Option<f32>>,
+    {
+        let gpio = Gpio::new()?;
+        let mut echo = gpio.get(echo.into().unwrap_or(Self::ECHO))?.into_input();
+        let mut trigger = gpio
+            .get(trigger.into().unwrap_or(Self::TRIGGER))?
+            .into_output();
+        trigger.set_low();
+        trigger.set_pwm_frequency(Self::ACTIVE_SONIC_FREQUENCY, Self::ACTIVE_SONIC_DUTY_CYCLE)?;
+        let ultrasonic = Arc::new(Mutex::new(Ultrasonic::new(temperature, humidity)));
+        let sense = ultrasonic.clone();
+        let echo_closure = move |level| {
+            let mut ultrasonic = sense.lock().expect("Someone broke the lock");
+            let dur = (SystemTime::now())
+                .duration_since(UNIX_EPOCH)
+                .expect("Bad robot!!! No time traveling to the past!");
+            match level {
+                Level::Low => {
+                    // Only process a falling edge when there was a leading edge.
+                    if let Some(rising) = ultrasonic.rising {
+                        ultrasonic.rising = None;
+                        // Only process falling edge that happened after the
+                        // leading edge.
+                        if let Some(diff) = dur.checked_sub(rising) {
+                            let distance = diff.as_secs_f32() * ultrasonic.speed_of_sound;
+                            if distance > 2.0 && distance < 500.0 {
+                                ultrasonic.queue.push(distance);
+                            }
+                        }
+                    }
+                }
+                Level::High => {
+                    ultrasonic.rising = Some(dur);
+                }
+            }
+        };
+        echo.set_async_interrupt(Both, echo_closure)?;
+        Ok(Self {
+            active_sonar: false,
+            ultrasonic,
+            echo,
+            trigger,
+        })
+    }
+    /// Sets if active sonar pinging should be used.
+    ///
+    /// ## Arguments
+    ///
+    /// * `enable` -Turns on active background sonar pinging when `true`.
+    pub fn set_sonar_active(&mut self, enable: bool) {
+        self.active_sonar = enable;
+        if enable {
+            self.trigger.enable();
+        } else {
+            self.trigger.disable();
+        }
+    }
+    /// Used to acquire latest ultrasonic distance measurement if available.
+    ///
+    /// Polls for distance measurement in a loop with a timeout.
+    pub fn distance(&mut self) -> Option<f32> {
+        let timeout = (SystemTime::now()).add(Duration::from_nanos(Self::ULTRASONIC_TIMEOUT));
+        let dur = Duration::from_micros(10);
+        if !self.active_sonar {
+            // Ping
+            self.trigger.set_high();
+            sleep(Duration::from_nanos(10000));
+            self.trigger.set_low();
+            sleep(Duration::from_nanos(2000));
+        }
+        while SystemTime::now() < timeout {
+            // Release lock as early as possible so echo interrupt thread can
+            // grab it.
+            {
+                let mut ultrasonic = self.ultrasonic.lock().expect("Someone broke the lock");
+                if let Some(distance) = ultrasonic.queue.pop() {
+                    return Some(distance);
+                }
+            }
+            sleep(dur);
+        }
+        None
+    }
+    /// Timeout in nanoseconds (ns) ≈ 30 Hz
+    pub const ULTRASONIC_TIMEOUT: u64 = 33_333_000;
+    /// Ultrasonic echo input pin #.
+    const ECHO: u8 = 0;
+    /// Ultrasonic trigger output pin #.
+    const TRIGGER: u8 = 1;
+    /// Frequency for active sonic pings in Hz.
+    const ACTIVE_SONIC_FREQUENCY: f64 = 30.0;
+    /// PWM Duty cycle in % used for active sonic.
+    const ACTIVE_SONIC_DUTY_CYCLE: f64 = 0.003;
+}
+
 /// Holds data related to ultrasonic measurements.
 #[derive(Debug)]
-pub struct Ultrasonic {
-    /// Latest unread distance measurement.
-    pub distance: Option<f32>,
+struct Ultrasonic {
     /// Time of latest rising edge from echo pin.
     ///
     /// This is used in calculating `distance` along with the time of the
@@ -464,10 +534,23 @@ pub struct Ultrasonic {
     pub rising: Option<Duration>,
     /// Used in `distance` calculation.
     pub speed_of_sound: f32,
+    /// Queue of latest available distances.
     pub queue: CircularQueue,
 }
 
 impl Ultrasonic {
+    /// Constructor
+    ///
+    /// ## Arguments
+    ///
+    /// The `temperature` and `humidity` values are used to increase the
+    /// accuracy of ultrasonic distance measurements.
+    ///
+    /// * `temperature` - Temperature in °C.
+    /// A `None` value will set a default of 20°C.
+    /// Temperatures are limited to between -40 and +65.5°C.
+    /// * `humidity` - Relative humidity as %.
+    /// A `None` value will set a default of 40%.
     pub fn new<T: Into<Option<f32>>, H: Into<Option<f32>>>(temperature: T, humidity: H) -> Self {
         let temperature = temperature.into().unwrap_or(20.0).min(65.5).max(-40.0);
         let humidity = humidity.into().unwrap_or(40.0).min(100.0).max(0.0);
@@ -475,7 +558,6 @@ impl Ultrasonic {
         // * (100 cm/meter / 2 out and back)
         let speed_of_sound = (331.3 + 0.606 * temperature + 0.0124 * humidity) * 50.0;
         Self {
-            distance: None,
             rising: None,
             speed_of_sound,
             queue: CircularQueue::new(),

@@ -57,8 +57,8 @@ fn main() -> Result<()> {
             .model()
     );
     sleep(Duration::from_secs(2));
-    let mut sensors = Sensors::new(None, None).context("Failed to get instance")?;
-    sensors.set_sonar_active(true);
+    let mut sensors = Sensors::new().context("Failed to get instance")?;
+    sensors.sonar_active(true);
     // Give it a little time to queue up sonar data.
     sleep(Duration::from_secs_f64(0.05));
     // Stuff needed to nicely handle Ctrl-C from user.

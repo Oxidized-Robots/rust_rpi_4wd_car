@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     );
     let mut hids = Hids::new().context("Failed to get hids instance")?;
     let mut motors = Motors::new().context("Failed to get motors instance")?;
-    let mut sensors = Sensors::new(None, None).context("Failed to get sensors instance")?;
+    let mut sensors = Sensors::new().context("Failed to get sensors instance")?;
     let mut servos = Servos::new().context("Failed to get servos instance")?;
     // Stuff needed to nicely handle Ctrl-C from user.
     let running = Arc::new(AtomicBool::new(true));
@@ -241,13 +241,13 @@ fn sensors_test(sensors: &mut Sensors) -> Result<()> {
             .model()
     );
     for _ in [0..5].iter() {
-        let distance = sensors.ultrasonic().unwrap_or(-1.0);
-        let ir = sensors.ir_proximities();
+        let distance = sensors.sonar_distance().unwrap_or(-1.0);
+        let ir = sensors.ir_proximity();
         let ldr = sensors.ldr_tracking();
-        let tracking = sensors.line_tracking();
+        let line = sensors.line_tracking();
         println!(
             "ultrasonic: {:6.2}, tracking: {:?}, ir: {:?}, ldr: {:?}",
-            distance, tracking, ir, ldr
+            distance, line, ir, ldr
         );
     }
     println!("Finished sensors tests");

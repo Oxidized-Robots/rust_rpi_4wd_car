@@ -57,7 +57,7 @@ fn main() -> Result<()> {
             .model()
     );
     sleep(Duration::from_secs(2));
-    let mut sensors = Sensors::new(None, None).context("Failed to get instance")?;
+    let mut sensors = Sensors::new().context("Failed to get instance")?;
     // Stuff needed to nicely handle Ctrl-C from user.
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -78,8 +78,8 @@ fn main() -> Result<()> {
 
 fn test(sensors: &mut Sensors) {
     // Raw sensor data.
-    let distance = sensors.ultrasonic().unwrap_or(-1.0);
-    let ir = sensors.ir_proximities();
+    let distance = sensors.sonar_distance().unwrap_or(-1.0);
+    let ir = sensors.ir_proximity();
     let ldr = sensors.ldr_tracking();
     let tracking = sensors.line_tracking();
     println!(
