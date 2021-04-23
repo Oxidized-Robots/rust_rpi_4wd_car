@@ -43,7 +43,7 @@ Which should add something like this in your [Cargo.toml]:
 
 ```toml
 [dependencies]
-rust_rpi_4wd_car = "0.0.10"
+rust_rpi_4wd_car = "0.0.12"
 ```
 
 ## Examples
